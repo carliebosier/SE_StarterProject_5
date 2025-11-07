@@ -1,0 +1,9 @@
+.Found-solutions-list {
+  margin: 16px 0;
+}
+.Found-solutions-list ul {
+  columns: 2;
+  padding-left: 18px;
+}
+
+

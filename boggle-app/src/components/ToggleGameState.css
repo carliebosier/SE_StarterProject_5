@@ -1,0 +1,21 @@
+.Toggle-game-state {
+  margin: 16px 0;
+}
+.controls-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.primary-button {
+  padding: 8px 16px;
+  font-weight: 600;
+}
+.size-select label {
+  margin-right: 6px;
+}
+.timer {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+

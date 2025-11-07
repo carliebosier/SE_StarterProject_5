@@ -1,0 +1,218 @@
+.App {
+  text-align: center;
+  color: #282c34;
+  width: 90%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+.header {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.header h1 {
+  margin: 0 0 15px 0;
+  font-size: 2.5em;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: bold;
+}
+
+.game-stats {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  flex-wrap: wrap;
+  margin-top: 15px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 10px;
+  color: white;
+  min-width: 120px;
+}
+
+.stat-label {
+  font-size: 0.85em;
+  opacity: 0.9;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 1.5em;
+  font-weight: bold;
+}
+
+.game-controls {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.save-load-section {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 2px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.save-game-controls,
+.load-game-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.game-name-input,
+.game-select {
+  padding: 12px 15px;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  font-size: 1em;
+  min-width: 250px;
+  transition: all 0.3s ease;
+}
+
+.game-name-input:focus,
+.game-select:focus {
+  outline: none;
+  border-color: #764ba2;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.game-name-input:disabled,
+.game-select:disabled {
+  background-color: #f5f5f5;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.save-button,
+.load-button {
+  padding: 12px 25px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.save-button:hover:not(:disabled),
+.load-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.save-button:active:not(:disabled),
+.load-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.save-button:disabled,
+.load-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.save-message {
+  padding: 8px 15px;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.save-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.save-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.game-content {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 15px;
+  padding: 30px;
+  margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.message {
+  margin: 8px 0;
+  color: #0a7e07;
+  font-weight: 600;
+  padding: 10px;
+  background-color: #d4edda;
+  border-radius: 6px;
+  border: 1px solid #c3e6cb;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .App {
+    width: 95%;
+    padding: 10px;
+  }
+
+  .header h1 {
+    font-size: 1.8em;
+  }
+
+  .game-stats {
+    gap: 15px;
+  }
+
+  .stat-item {
+    min-width: 100px;
+    padding: 8px 15px;
+  }
+
+  .save-game-controls,
+  .load-game-controls {
+    flex-direction: column;
+  }
+
+  .game-name-input,
+  .game-select {
+    width: 100%;
+    min-width: auto;
+  }
+
+  .save-button,
+  .load-button {
+    width: 100%;
+  }
+}

@@ -1,0 +1,15 @@
+.Summary {
+  margin: 16px 0;
+  padding: 12px;
+  border: 1px solid #e8ebef;
+  border-radius: 8px;
+  background: #fbfcfe;
+}
+.Summary h2 {
+  margin: 0 0 8px 0;
+}
+.Summary ul {
+  margin: 0;
+}
+
+
