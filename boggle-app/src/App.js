@@ -4,8 +4,14 @@ import GuessInput from './components/GuessInput';
 import FoundSolutions from './components/FoundSolutions';
 import SummaryResults from './components/SummaryResults';
 import ToggleGameState from './components/ToggleGameState';
+import AuthButton from './components/AuthButton';
+import ChallengeLoader from './components/ChallengeLoader';
+import Leaderboard from './components/Leaderboard';
+import AdminPanel from './components/AdminPanel';
 import './App.css';
 import {GAME_STATE} from './GameState.js';
+import { submitScore } from './firebase/firestoreService';
+import { calculateTotalScore } from './utils/scoring';
 
 function App() {
   const [allSolutions, setAllSolutions] = useState([]);  // solutions from solver
@@ -21,6 +27,12 @@ function App() {
   const [saveMessage, setSaveMessage] = useState(''); // message for save feedback
   const [gameStats, setGameStats] = useState({ totalGames: 0, totalWords: 0, avgWords: 0 }); // game statistics
   const [isLoadingGame, setIsLoadingGame] = useState(false); // flag to prevent creating new game while loading
+  const [user, setUser] = useState(null); // Firebase user
+  const [currentChallenge, setCurrentChallenge] = useState(null); // current challenge being played
+  const [showChallengeLoader, setShowChallengeLoader] = useState(false); // show challenge loader modal
+  const [showLeaderboard, setShowLeaderboard] = useState(false); // show leaderboard modal
+  const [showAdminPanel, setShowAdminPanel] = useState(false); // show admin panel
+  const [currentScore, setCurrentScore] = useState(0); // current game score
 
   const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -60,8 +72,8 @@ function App() {
 
   useEffect(() => {
     if (gameState === GAME_STATE.IN_PROGRESS && !isLoadingGame) {
-      // Only create a new game if grid is empty (not when loading a saved game)
-      if (grid.length === 0) {
+      // Only create a new game if grid is empty and not loading a challenge
+      if (grid.length === 0 && !currentChallenge) {
         const url = `${apiBaseUrl}/api/game/create/${size}`;
         console.log("Creating new game:", url);
         fetch(url)
@@ -72,6 +84,7 @@ function App() {
             const s = data.grid.replace(/'/g, '"'); // replace single quotes with double quotes
             setGrid(JSON.parse(s)); // parse JSON string to a 2D array
             setFoundSolutions([]);
+            setCurrentScore(0);
           })
           .catch((err) => {
             console.log("Fetch error:", err.message);
@@ -84,8 +97,10 @@ function App() {
       setFoundSolutions([]);
       setAllSolutions([]);
       setIsLoadingGame(false);
+      setCurrentChallenge(null);
+      setCurrentScore(0);
     }
-  }, [gameState, size, isLoadingGame]);
+  }, [gameState, size, isLoadingGame, currentChallenge]);
 
   // useEffect will trigger when the array items in the second argument are
   // updated so whenever grid is updated, we will recompute the solutions
@@ -98,8 +113,73 @@ function App() {
 
   function correctAnswerFound(answer) {
     console.log("New correct answer:" + answer);
-    setFoundSolutions([...foundSolutions, answer]);
+    const newFoundSolutions = [...foundSolutions, answer];
+    setFoundSolutions(newFoundSolutions);
+    
+    // Calculate and update score
+    const newScore = calculateTotalScore(newFoundSolutions);
+    setCurrentScore(newScore);
+    
+    // If playing a challenge and user is signed in, submit score automatically
+    if (currentChallenge && user && gameState === GAME_STATE.IN_PROGRESS) {
+      submitScoreToFirebase(newFoundSolutions, newScore, false);
+    }
   }
+  
+  // Submit score to Firebase
+  const submitScoreToFirebase = async (wordsFound, score, isFinal = false) => {
+    if (!currentChallenge || !user) return;
+    
+    try {
+      await submitScore(
+        user.uid,
+        user.displayName || user.email,
+        user.email,
+        currentChallenge.id,
+        currentChallenge.name,
+        score,
+        wordsFound.length,
+        totalTime
+      );
+      
+      if (isFinal) {
+        console.log('Final score submitted to Firebase');
+      }
+    } catch (error) {
+      console.error('Error submitting score to Firebase:', error);
+    }
+  };
+  
+  // Handle loading a challenge
+  const handleLoadChallenge = (challenge) => {
+    setCurrentChallenge(challenge);
+    setGrid(challenge.grid);
+    setAllSolutions(challenge.foundwords);
+    setFoundSolutions([]);
+    setSize(challenge.size);
+    setTotalTime(0);
+    setCurrentScore(0);
+    setGameState(GAME_STATE.IN_PROGRESS);
+    setIsLoadingGame(true);
+    setTimeout(() => setIsLoadingGame(false), 100);
+  };
+  
+  // Handle challenge game end
+  useEffect(() => {
+    if (gameState === GAME_STATE.ENDED && currentChallenge && user) {
+      // Submit final score when game ends
+      submitScoreToFirebase(foundSolutions, currentScore, true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, currentChallenge, user, currentScore]);
+  
+  // Reset challenge when going back to BEFORE state
+  useEffect(() => {
+    if (gameState === GAME_STATE.BEFORE) {
+      setCurrentChallenge(null);
+      setCurrentScore(0);
+    }
+  }, [gameState]);
 
   function handleSaveGame() {
     if (!gameName.trim()) {
@@ -175,7 +255,7 @@ function App() {
     console.log("Loading game with ID:", selectedGameId);
     setIsLoadingGame(true);
     
-    fetch(`${apiBaseUrl}/api/game/${selectedGameId}/`)
+    fetch(`${apiBaseUrl}/api/game/${selectedGameId}`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -219,6 +299,17 @@ function App() {
     <div className="App">
       <div className="header">
         <h1>🎲 Bison Boggle 🎲</h1>
+        <div className="header-right">
+          <AuthButton onUserChange={setUser} />
+          {currentChallenge && (
+            <div className="challenge-info">
+              <span className="challenge-badge">Challenge: {currentChallenge.name}</span>
+              {currentScore > 0 && (
+                <span className="current-score">Score: {currentScore}</span>
+              )}
+            </div>
+          )}
+        </div>
         <div className="game-stats">
           <div className="stat-item">
             <span className="stat-label">Total Games:</span>
@@ -242,6 +333,31 @@ function App() {
           setSize={(state) => setSize(state)}
           setTotalTime={(state) => setTotalTime(state)}
         />
+
+        <div className="challenge-section">
+          <button 
+            className="challenge-button"
+            onClick={() => setShowChallengeLoader(true)}
+            disabled={gameState === GAME_STATE.IN_PROGRESS}
+          >
+            🏆 Load Challenge
+          </button>
+          {currentChallenge && (
+            <button 
+              className="leaderboard-button"
+              onClick={() => setShowLeaderboard(true)}
+            >
+              📊 View Leaderboard
+            </button>
+          )}
+          <button 
+            className="admin-button"
+            onClick={() => setShowAdminPanel(true)}
+            title="Admin: Populate challenges in Firestore"
+          >
+            ⚙️ Admin
+          </button>
+        </div>
 
         <div className="save-load-section">
           <div className="save-game-controls">
@@ -306,7 +422,12 @@ function App() {
       { gameState === GAME_STATE.ENDED &&
         <div className="game-content">
           <Board board={grid} hidden={false} />
-          <SummaryResults words={foundSolutions} totalTime={totalTime} />
+          <SummaryResults 
+            words={foundSolutions} 
+            totalTime={totalTime} 
+            score={currentScore}
+            isChallenge={!!currentChallenge}
+          />
           <FoundSolutions 
             headerText="Missed Words [wordsize > 3]: " 
             words={allSolutions.filter(word => {
@@ -317,6 +438,25 @@ function App() {
           />
         </div>
       }
+      
+      {showChallengeLoader && (
+        <ChallengeLoader
+          onLoadChallenge={handleLoadChallenge}
+          onClose={() => setShowChallengeLoader(false)}
+        />
+      )}
+      
+      {showLeaderboard && currentChallenge && (
+        <Leaderboard
+          challengeId={currentChallenge.id}
+          challengeName={currentChallenge.name}
+          onClose={() => setShowLeaderboard(false)}
+        />
+      )}
+      
+      {showAdminPanel && (
+        <AdminPanel onClose={() => setShowAdminPanel(false)} />
+      )}
     </div>
   );
 }

@@ -1,0 +1,151 @@
+.admin-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1001;
+}
+
+.admin-panel-modal {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.admin-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
+}
+
+.admin-panel-header h2 {
+  margin: 0;
+  color: #333;
+  font-size: 1.5em;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: #666;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.close-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.admin-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.populate-btn {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.populate-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.populate-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-message {
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.admin-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.admin-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.populated-list {
+  margin-top: 20px;
+}
+
+.populated-list h3 {
+  margin: 0 0 10px 0;
+  color: #333;
+}
+
+.populated-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.populated-list li {
+  padding: 8px 12px;
+  margin: 5px 0;
+  border-radius: 4px;
+  background: #f9f9f9;
+}
+
+.populated-list li.success {
+  background: #d4edda;
+  color: #155724;
+}
+
+.populated-list li.error {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.challenge-id {
+  font-size: 0.9em;
+  opacity: 0.7;
+  margin-left: 5px;
+}
+
+.error-text {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.9em;
+}
+

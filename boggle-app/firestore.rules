@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Challenges collection - read only for all users
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow write: if false; // Only admins can write via admin SDK
+    }
+    
+    // Leaderboard collection - users can read, authenticated users can write their own scores
+    match /leaderboard/{leaderboardId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow delete: if false;
+    }
+    
+    // Scores collection - users can read, authenticated users can write their own scores
+    match /scores/{scoreId} {
+      allow read: if true;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
+

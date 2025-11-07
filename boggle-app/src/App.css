@@ -29,6 +29,37 @@
   font-weight: bold;
 }
 
+.header-right {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.challenge-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 15px;
+  background: #fff3cd;
+  border-radius: 20px;
+  border: 2px solid #ffc107;
+}
+
+.challenge-badge {
+  font-weight: 600;
+  color: #856404;
+  font-size: 14px;
+}
+
+.current-score {
+  font-weight: bold;
+  color: #4CAF50;
+  font-size: 16px;
+}
+
 .game-stats {
   display: flex;
   justify-content: center;
@@ -66,6 +97,71 @@
   margin-bottom: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+}
+
+.challenge-section {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e0e0e0;
+  flex-wrap: wrap;
+}
+
+.challenge-button,
+.leaderboard-button,
+.admin-button {
+  padding: 12px 25px;
+  background: linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+}
+
+.leaderboard-button {
+  background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
+  box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
+}
+
+.admin-button {
+  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+  box-shadow: 0 4px 15px rgba(149, 165, 166, 0.3);
+  font-size: 0.9em;
+  padding: 10px 20px;
+}
+
+.challenge-button:hover:not(:disabled),
+.leaderboard-button:hover,
+.admin-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+}
+
+.leaderboard-button:hover {
+  box-shadow: 0 6px 20px rgba(78, 205, 196, 0.4);
+}
+
+.admin-button:hover {
+  box-shadow: 0 6px 20px rgba(149, 165, 166, 0.4);
+}
+
+.challenge-button:active:not(:disabled),
+.leaderboard-button:active,
+.admin-button:active {
+  transform: translateY(0);
+}
+
+.challenge-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .save-load-section {
