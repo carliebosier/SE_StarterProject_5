@@ -35,6 +35,55 @@ function App() {
     return tokens;
   }
 
+  // Helper function to parse grid string - handles both JSON and Python str() formats
+  const parseGridString = (gridStr) => {
+    if (!gridStr || typeof gridStr !== 'string') {
+      throw new Error("Grid string is invalid");
+    }
+    
+    // Try multiple parsing strategies
+    // Strategy 1: Direct JSON parse (if already in JSON format with double quotes)
+    try {
+      const parsed = JSON.parse(gridStr);
+      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+        return parsed;
+      }
+    } catch (e) {
+      // Not valid JSON, continue to next strategy
+    }
+    
+    // Strategy 2: Replace single quotes with double quotes and parse as JSON
+    // This handles Python str() format: [['A', 'B'], ['C', 'D']]
+    try {
+      // Replace single quotes with double quotes
+      // Use a regex that's more careful about quote boundaries
+      let jsonStr = gridStr.replace(/'/g, '"');
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+        return parsed;
+      }
+    } catch (e) {
+      console.warn("JSON parsing with quote replacement failed:", e);
+    }
+    
+    // Strategy 3: Use eval as last resort (safe here since we control the data source)
+    // This is a fallback for edge cases where JSON parsing fails
+    try {
+      // Sanitize the string first - only allow alphanumeric, brackets, commas, quotes, and spaces
+      const sanitized = gridStr.replace(/[^\[\],'\"\w\s]/g, '');
+      // eslint-disable-next-line no-eval
+      const parsed = eval('(' + sanitized + ')');
+      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
+        console.warn("Used eval to parse grid - consider fixing the data format");
+        return parsed;
+      }
+    } catch (e) {
+      console.error("Eval parsing also failed:", e);
+    }
+    
+    throw new Error(`Failed to parse grid string. Original: ${gridStr.substring(0, 100)}...`);
+  }
+
   // Load saved games list
   useEffect(() => {
     fetch(`${apiBaseUrl}/api/games/`)
@@ -186,28 +235,47 @@ function App() {
       })
       .then((data) => {
         console.log("Loaded game data:", data);
+        console.log("Grid string:", data.grid);
         
-        // Parse the grid
-        const gridStr = data.grid.replace(/'/g, '"');
-        const parsedGrid = JSON.parse(gridStr);
-        
-        // Parse foundwords (which contains all possible solutions)
-        const allWords = Convert(data.foundwords);
-        
-        // Set all state at once to avoid race conditions
-        setGrid(parsedGrid);
-        setAllSolutions(allWords);
-        setFoundSolutions([]); // Reset found solutions (user starts fresh when loading)
-        setGame(data);
-        setSize(data.size);
-        setTotalTime(0);
-        
-        // Set game state to IN_PROGRESS to show the board
-        // This will trigger useEffect, but isLoadingGame flag prevents creating new game
-        setGameState(GAME_STATE.IN_PROGRESS);
-        
-        // Clear loading flag after a short delay to ensure state is set
-        setTimeout(() => setIsLoadingGame(false), 100);
+        try {
+          // Parse the grid using the helper function that handles multiple formats
+          const parsedGrid = parseGridString(data.grid);
+          console.log("Parsed grid:", parsedGrid);
+          
+          // Validate that we got a valid 2D array
+          if (!Array.isArray(parsedGrid) || parsedGrid.length === 0) {
+            throw new Error("Invalid grid format: not an array");
+          }
+          
+          // Validate all rows are arrays
+          if (!parsedGrid.every(row => Array.isArray(row))) {
+            throw new Error("Invalid grid format: not all rows are arrays");
+          }
+          
+          // Parse foundwords (which contains all possible solutions)
+          const allWords = Convert(data.foundwords);
+          console.log("Parsed words count:", allWords.length);
+          
+          // Set all state at once to avoid race conditions
+          setGrid(parsedGrid);
+          setAllSolutions(allWords);
+          setFoundSolutions([]); // Reset found solutions (user starts fresh when loading)
+          setGame(data);
+          setSize(data.size);
+          setTotalTime(0);
+          
+          // Set game state to IN_PROGRESS to show the board
+          // This will trigger useEffect, but isLoadingGame flag prevents creating new game
+          setGameState(GAME_STATE.IN_PROGRESS);
+          
+          // Clear loading flag after a short delay to ensure state is set
+          setTimeout(() => setIsLoadingGame(false), 100);
+        } catch (parseError) {
+          console.error("Error parsing game data:", parseError);
+          console.error("Grid string that failed:", data.grid);
+          setIsLoadingGame(false);
+          alert(`Error parsing game data: ${parseError.message}. Please check the console for details.`);
+        }
       })
       .catch((err) => {
         console.error("Error loading game:", err);
