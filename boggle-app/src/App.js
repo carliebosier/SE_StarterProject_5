@@ -5,6 +5,7 @@ import FoundSolutions from './components/FoundSolutions';
 import SummaryResults from './components/SummaryResults';
 import ToggleGameState from './components/ToggleGameState';
 import ChallengeList from './components/ChallengeList';
+import PopulateChallengesButton from './components/PopulateChallengesButton';
 import './App.css';
 import {GAME_STATE} from './GameState.js';
 
@@ -22,6 +23,7 @@ function App() {
   const [gameStats, setGameStats] = useState({ totalGames: 0, totalWords: 0, avgWords: 0 }); // game statistics
   const [isLoadingGame, setIsLoadingGame] = useState(false); // flag to prevent creating new game while loading
   const [showChallengeList, setShowChallengeList] = useState(false); // flag to show/hide challenge list modal
+  const [showAdminPanel, setShowAdminPanel] = useState(false); // flag to show/hide admin panel for populating Firestore
 
   const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -316,6 +318,34 @@ function App() {
         </div>
       </div>
       
+      {/* Temporary Admin Panel - Remove after populating challenges */}
+      <div className="game-controls" style={{ marginBottom: '10px', background: '#fff3cd', border: '2px solid #ffc107' }}>
+        <button 
+          onClick={() => setShowAdminPanel(!showAdminPanel)}
+          style={{
+            padding: '8px 16px',
+            background: showAdminPanel ? '#ffc107' : '#f0f0f0',
+            border: '1px solid #ccc',
+            borderRadius: '5px',
+            cursor: 'pointer',
+            fontSize: '0.9em',
+            marginBottom: showAdminPanel ? '15px' : '0'
+          }}
+        >
+          {showAdminPanel ? '▼ Hide' : '▶ Show'} Admin Panel (Firestore Setup)
+        </button>
+        
+        {showAdminPanel && (
+          <div style={{ marginTop: '15px' }}>
+            <h3 style={{ marginTop: '0', color: '#856404', fontSize: '1.1em' }}>Firestore Admin Panel</h3>
+            <p style={{ fontSize: '0.9em', color: '#856404', marginBottom: '15px' }}>
+              Use this to populate Firestore with fixed challenge grids. This panel can be removed after setup.
+            </p>
+            <PopulateChallengesButton />
+          </div>
+        )}
+      </div>
+
       <div className="game-controls">
         <ToggleGameState 
           gameState={gameState}
