@@ -1,9 +1,19 @@
 .Found-solutions-list {
-  margin: 16px 0;
+  margin: 12px 0;
+  max-height: 200px;
+  overflow-y: auto;
 }
 .Found-solutions-list ul {
   columns: 2;
   padding-left: 18px;
+  margin: 8px 0;
+  font-size: 0.9em;
+}
+
+@media (max-height: 700px) {
+  .Found-solutions-list {
+    max-height: 150px;
+  }
 }
 
 

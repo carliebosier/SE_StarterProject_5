@@ -8,20 +8,21 @@
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  box-sizing: border-box;
 }
 
 .header {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
 }
 
 .header h1 {
-  margin: 0 0 15px 0;
-  font-size: 2.5em;
+  margin: 0 0 10px 0;
+  font-size: clamp(1.5em, 4vw, 2.5em);
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -32,9 +33,9 @@
 .game-stats {
   display: flex;
   justify-content: center;
-  gap: 30px;
+  gap: 20px;
   flex-wrap: wrap;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 
 .stat-item {
@@ -62,19 +63,19 @@
 .game-controls {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
-  padding: 20px;
-  margin-bottom: 20px;
+  padding: 15px 20px;
+  margin-bottom: 15px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
 }
 
 .save-load-section {
-  margin-top: 20px;
-  padding-top: 20px;
+  margin-top: 15px;
+  padding-top: 15px;
   border-top: 2px solid #e0e0e0;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
 }
 
 .save-game-controls,
@@ -164,10 +165,14 @@
 .game-content {
   background: rgba(255, 255, 255, 0.95);
   border-radius: 15px;
-  padding: 30px;
+  padding: 20px;
   margin-bottom: 20px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .message {
