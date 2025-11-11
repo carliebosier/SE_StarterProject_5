@@ -6,6 +6,9 @@ import SummaryResults from './components/SummaryResults';
 import ToggleGameState from './components/ToggleGameState';
 import ChallengeList from './components/ChallengeList';
 import PopulateChallengesButton from './components/PopulateChallengesButton';
+import { db } from './firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
+import { convertFirestoreChallengeToApp } from './utils/firestoreHelpers';
 import './App.css';
 import {GAME_STATE} from './GameState.js';
 
@@ -24,6 +27,8 @@ function App() {
   const [isLoadingGame, setIsLoadingGame] = useState(false); // flag to prevent creating new game while loading
   const [showChallengeList, setShowChallengeList] = useState(false); // flag to show/hide challenge list modal
   const [showAdminPanel, setShowAdminPanel] = useState(false); // flag to show/hide admin panel for populating Firestore
+  const [firestoreChallenges, setFirestoreChallenges] = useState([]); // challenges from Firestore
+  const [loadingFirestoreChallenges, setLoadingFirestoreChallenges] = useState(false); // loading state for Firestore challenges
 
   const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -109,6 +114,47 @@ function App() {
         console.log("Error loading games:", err.message);
       });
   }, []);
+
+  // Load challenges from Firestore
+  useEffect(() => {
+    const loadFirestoreChallenges = async () => {
+      if (!db) {
+        console.log('Firestore not initialized, skipping challenge load');
+        return;
+      }
+
+      setLoadingFirestoreChallenges(true);
+      try {
+        const challengesCollection = collection(db, 'challenges');
+        const snapshot = await getDocs(challengesCollection);
+        
+        const challenges = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data();
+          try {
+            // Convert Firestore document to app format (flattened grid -> 2D grid)
+            const challenge = convertFirestoreChallengeToApp({
+              ...data,
+              id: doc.id, // Use Firestore document ID
+              source: 'firestore' // Mark as Firestore challenge
+            });
+            challenges.push(challenge);
+          } catch (error) {
+            console.error(`Error converting challenge ${doc.id}:`, error);
+          }
+        });
+        
+        console.log(`Loaded ${challenges.length} challenges from Firestore`);
+        setFirestoreChallenges(challenges);
+      } catch (error) {
+        console.error('Error loading Firestore challenges:', error);
+      } finally {
+        setLoadingFirestoreChallenges(false);
+      }
+    };
+
+    loadFirestoreChallenges();
+  }, []); // Load once on mount
 
   useEffect(() => {
     if (gameState === GAME_STATE.IN_PROGRESS && !isLoadingGame) {
@@ -223,15 +269,62 @@ function App() {
     setTimeout(() => setSaveMessage(''), 3000);
   }
 
-  function handleLoadGame(gameId) {
-    if (!gameId) {
+  function handleLoadGame(gameId, challengeData = null) {
+    if (!gameId && !challengeData) {
       return;
     }
 
-    console.log("Loading game with ID:", gameId);
+    console.log("Loading game/challenge:", gameId || challengeData?.name);
     setIsLoadingGame(true);
     setShowChallengeList(false); // Close modal when loading
-    
+
+    // If challengeData is provided, it's a Firestore challenge (already loaded)
+    if (challengeData) {
+      try {
+        console.log("Loading Firestore challenge:", challengeData);
+        
+        // Challenge data is already in app format (2D grid) from convertFirestoreChallengeToApp
+        const parsedGrid = challengeData.grid;
+        const allWords = challengeData.solutions || [];
+        
+        console.log("Loaded grid:", parsedGrid);
+        console.log("Loaded solutions count:", allWords.length);
+        
+        // Validate grid
+        if (!Array.isArray(parsedGrid) || parsedGrid.length === 0) {
+          throw new Error("Invalid grid format: not an array");
+        }
+        
+        if (!parsedGrid.every(row => Array.isArray(row))) {
+          throw new Error("Invalid grid format: not all rows are arrays");
+        }
+        
+        // Set all state at once to avoid race conditions
+        setGrid(parsedGrid);
+        setAllSolutions(allWords);
+        setFoundSolutions([]); // Reset found solutions (user starts fresh when loading)
+        setGame({
+          ...challengeData,
+          name: challengeData.name,
+          size: challengeData.size
+        });
+        setSize(challengeData.size);
+        setTotalTime(0);
+        
+        // Set game state to IN_PROGRESS to show the board
+        setGameState(GAME_STATE.IN_PROGRESS);
+        
+        // Clear loading flag after a short delay to ensure state is set
+        setTimeout(() => setIsLoadingGame(false), 100);
+      } catch (error) {
+        console.error("Error loading Firestore challenge:", error);
+        setIsLoadingGame(false);
+        alert(`Error loading challenge: ${error.message}`);
+      }
+      return;
+    }
+
+    // Otherwise, load from Django backend (existing functionality)
     fetch(`${apiBaseUrl}/api/game/${gameId}/`)
       .then((response) => {
         if (!response.ok) {
@@ -382,7 +475,7 @@ function App() {
             <button 
               className="load-button"
               onClick={handleShowChallengeList}
-              disabled={savedGames.length === 0}
+              disabled={firestoreChallenges.length === 0 && savedGames.length === 0}
             >
               🎮 Load Challenge
             </button>
@@ -419,10 +512,11 @@ function App() {
 
       {showChallengeList && (
         <ChallengeList
-          challenges={savedGames}
+          challenges={firestoreChallenges}
+          savedGames={savedGames}
           onSelectChallenge={handleLoadGame}
           onClose={handleCloseChallengeList}
-          Convert={Convert}
+          loading={loadingFirestoreChallenges}
         />
       )}
     </div>
