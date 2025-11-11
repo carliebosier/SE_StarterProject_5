@@ -4,6 +4,7 @@ import GuessInput from './components/GuessInput';
 import FoundSolutions from './components/FoundSolutions';
 import SummaryResults from './components/SummaryResults';
 import ToggleGameState from './components/ToggleGameState';
+import ChallengeList from './components/ChallengeList';
 import './App.css';
 import {GAME_STATE} from './GameState.js';
 
@@ -17,10 +18,10 @@ function App() {
   const [game, setGame] = useState({}); // used to hold the MOCK REST ENDPOINT DATA 
   const [gameName, setGameName] = useState(''); // name for saving game
   const [savedGames, setSavedGames] = useState([]); // list of saved games
-  const [selectedGameId, setSelectedGameId] = useState(''); // selected game to load
   const [saveMessage, setSaveMessage] = useState(''); // message for save feedback
   const [gameStats, setGameStats] = useState({ totalGames: 0, totalWords: 0, avgWords: 0 }); // game statistics
   const [isLoadingGame, setIsLoadingGame] = useState(false); // flag to prevent creating new game while loading
+  const [showChallengeList, setShowChallengeList] = useState(false); // flag to show/hide challenge list modal
 
   const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
@@ -62,7 +63,7 @@ function App() {
     if (gameState === GAME_STATE.IN_PROGRESS && !isLoadingGame) {
       // Only create a new game if grid is empty (not when loading a saved game)
       if (grid.length === 0) {
-        const url = `${apiBaseUrl}/api/game/create/${size}`;
+        const url = `${apiBaseUrl}/api/game/create/${size}/`;
         console.log("Creating new game:", url);
         fetch(url)
           .then((response) => response.json())
@@ -167,15 +168,16 @@ function App() {
     setTimeout(() => setSaveMessage(''), 3000);
   }
 
-  function handleLoadGame() {
-    if (!selectedGameId) {
+  function handleLoadGame(gameId) {
+    if (!gameId) {
       return;
     }
 
-    console.log("Loading game with ID:", selectedGameId);
+    console.log("Loading game with ID:", gameId);
     setIsLoadingGame(true);
+    setShowChallengeList(false); // Close modal when loading
     
-    fetch(`${apiBaseUrl}/api/game/${selectedGameId}/`)
+    fetch(`${apiBaseUrl}/api/game/${gameId}/`)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -199,7 +201,6 @@ function App() {
         setGame(data);
         setSize(data.size);
         setTotalTime(0);
-        setSelectedGameId('');
         
         // Set game state to IN_PROGRESS to show the board
         // This will trigger useEffect, but isLoadingGame flag prevents creating new game
@@ -213,6 +214,14 @@ function App() {
         setIsLoadingGame(false);
         alert(`Error loading game: ${err.message}`);
       });
+  }
+
+  function handleShowChallengeList() {
+    setShowChallengeList(true);
+  }
+
+  function handleCloseChallengeList() {
+    setShowChallengeList(false);
   }
 
   return (
@@ -268,24 +277,12 @@ function App() {
           </div>
 
           <div className="load-game-controls">
-            <select
-              className="game-select"
-              value={selectedGameId}
-              onChange={(e) => setSelectedGameId(e.target.value)}
-            >
-              <option value="">Select a saved game...</option>
-              {savedGames.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name} (Size: {g.size})
-                </option>
-              ))}
-            </select>
             <button 
               className="load-button"
-              onClick={handleLoadGame}
-              disabled={!selectedGameId}
+              onClick={handleShowChallengeList}
+              disabled={savedGames.length === 0}
             >
-              🎮 Load Game
+              🎮 Load Challenge
             </button>
           </div>
         </div>
@@ -317,6 +314,15 @@ function App() {
           />
         </div>
       }
+
+      {showChallengeList && (
+        <ChallengeList
+          challenges={savedGames}
+          onSelectChallenge={handleLoadGame}
+          onClose={handleCloseChallengeList}
+          Convert={Convert}
+        />
+      )}
     </div>
   );
 }
