@@ -17,4 +17,7 @@ class GamesSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Grid cannot be empty.")
         if not data.get('foundwords'):
             raise serializers.ValidationError("Foundwords cannot be empty.")
+        # Score is optional (defaults to 0), but if provided should be non-negative
+        if 'score' in data and data.get('score') < 0:
+            raise serializers.ValidationError("Score cannot be negative.")
         return data

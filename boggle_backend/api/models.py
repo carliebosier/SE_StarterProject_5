@@ -6,6 +6,7 @@ class Games(models.Model):
     size = models.IntegerField()
     grid = models.TextField() # Serialize the 2d array to a string:
     foundwords = models.TextField() #Serialize the array of words to a single string:
+    score = models.IntegerField(default=0) # Number of words found by the user when saving
 
     def __str__(self):
         return f'Name: {self.name} Size: {self.size} Grid: {self.grid}'

@@ -18,12 +18,17 @@ function ChallengeList({ challenges, onSelectChallenge, onClose, Convert }) {
     );
   }
 
-  // Calculate high score (total words available) for each challenge
+  // Use the score field (words found by user) as high score
+  // For games saved after adding the score field, use the actual score
+  // Note: Old games will have score=0 (default), but we can't distinguish between
+  // "user found 0 words" and "old game". We'll use the score as-is.
   const challengesWithScores = challenges.map(challenge => {
-    const words = Convert(challenge.foundwords);
+    // Use score if it exists, otherwise default to 0
+    // The score field should always exist now (defaults to 0 for old games)
+    const score = challenge.score !== undefined && challenge.score !== null ? challenge.score : 0;
     return {
       ...challenge,
-      highScore: words.length
+      highScore: score
     };
   });
 
@@ -49,7 +54,9 @@ function ChallengeList({ challenges, onSelectChallenge, onClose, Convert }) {
                   <div className="challenge-name">{challenge.name}</div>
                   <div className="challenge-details">
                     <span className="challenge-size">Size: {challenge.size}x{challenge.size}</span>
-                    <span className="challenge-score">High Score: {challenge.highScore} words</span>
+                    <span className="challenge-score">
+                      High Score: {challenge.highScore} words
+                    </span>
                   </div>
                 </div>
                 <div className="challenge-arrow">→</div>

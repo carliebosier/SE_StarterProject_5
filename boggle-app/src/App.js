@@ -173,11 +173,15 @@ function App() {
       ? JSON.stringify(allSolutions).replace(/"/g, "'")
       : JSON.stringify(foundSolutions).replace(/"/g, "'");
     
+    // Calculate score: number of words the user found
+    const userScore = foundSolutions.length;
+    
     const gameData = {
       name: gameName.trim(),
       size: size,
       grid: gridStr,
-      foundwords: allWordsStr
+      foundwords: allWordsStr,
+      score: userScore
     };
 
     fetch(`${apiBaseUrl}/api/game/save/`, {
