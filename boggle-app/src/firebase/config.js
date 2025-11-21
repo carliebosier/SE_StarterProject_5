@@ -4,6 +4,7 @@
 
 import { initializeApp } from 'firebase/app';
 import { getFirestore, connectFirestoreEmulator, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
@@ -55,6 +56,8 @@ if (!validateFirebaseConfig()) {
 // Initialize Firebase
 let app;
 let db;
+let auth;
+let googleProvider;
 let initializationError = null;
 
 try {
@@ -64,6 +67,8 @@ try {
   if (hasValidConfig) {
     app = initializeApp(firebaseConfig);
     db = getFirestore(app);
+    auth = getAuth(app);
+    googleProvider = new GoogleAuthProvider();
     
     // Enable network (in case it was disabled)
     enableNetwork(db).catch(err => {
@@ -81,6 +86,6 @@ try {
   // Don't throw here - let the app load and show error in UI
 }
 
-export { db, initializationError };
+export { db, auth, googleProvider, initializationError };
 export default app;
 

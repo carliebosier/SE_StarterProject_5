@@ -1,0 +1,138 @@
+.leaderboard-container {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.leaderboard-title {
+  margin: 0 0 10px 0;
+  font-size: 1.5em;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.leaderboard-subtitle {
+  margin: 0 0 15px 0;
+  color: #666;
+  font-size: 0.9em;
+  font-style: italic;
+}
+
+.scores-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.score-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.score-item:hover {
+  background: #e9ecef;
+  transform: translateX(3px);
+}
+
+.score-item.user-score {
+  background: #fff3cd;
+  border-color: #ffc107;
+  font-weight: 600;
+}
+
+.score-rank {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #667eea;
+  min-width: 35px;
+  text-align: center;
+}
+
+.score-user-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.score-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid #ddd;
+}
+
+.score-user-name {
+  color: #333;
+  font-weight: 500;
+}
+
+.you-badge {
+  color: #667eea;
+  font-weight: 600;
+  font-size: 0.9em;
+}
+
+.score-value {
+  font-weight: bold;
+  font-size: 1.1em;
+  color: #667eea;
+  min-width: 80px;
+  text-align: right;
+}
+
+.no-scores {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 20px;
+}
+
+.error-message {
+  color: #dc3545;
+  text-align: center;
+  padding: 10px;
+}
+
+.user-score-section {
+  margin-top: 15px;
+}
+
+.score-divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 15px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .leaderboard-container {
+    padding: 15px;
+  }
+
+  .score-item {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .score-rank {
+    font-size: 1em;
+    min-width: 30px;
+  }
+
+  .score-value {
+    font-size: 1em;
+    min-width: 70px;
+  }
+}
+

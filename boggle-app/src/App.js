@@ -6,9 +6,13 @@ import SummaryResults from './components/SummaryResults';
 import ToggleGameState from './components/ToggleGameState';
 import ChallengeList from './components/ChallengeList';
 import PopulateChallengesButton from './components/PopulateChallengesButton';
+import GoogleSignIn from './components/GoogleSignIn';
+import Leaderboard from './components/Leaderboard';
+import { useAuth } from './contexts/AuthContext';
 import { db } from './firebase/config';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { convertFirestoreChallengeToApp } from './utils/firestoreHelpers';
+import { saveScore } from './utils/scoreService';
 import './App.css';
 import {GAME_STATE} from './GameState.js';
 
@@ -29,7 +33,10 @@ function App() {
   const [showAdminPanel, setShowAdminPanel] = useState(false); // flag to show/hide admin panel for populating Firestore
   const [firestoreChallenges, setFirestoreChallenges] = useState([]); // challenges from Firestore
   const [loadingFirestoreChallenges, setLoadingFirestoreChallenges] = useState(false); // loading state for Firestore challenges
+  const [currentChallengeId, setCurrentChallengeId] = useState(null); // ID of current Firestore challenge being played
+  const [scoreSaved, setScoreSaved] = useState(false); // Flag to track if score has been saved
 
+  const { currentUser } = useAuth();
   const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
   const Convert = (s) => {  // convert a string into an array of tokens that are strings
@@ -181,6 +188,8 @@ function App() {
       setGrid([]);
       setFoundSolutions([]);
       setAllSolutions([]);
+      setCurrentChallengeId(null);
+      setScoreSaved(false);
       setIsLoadingGame(false);
     }
   }, [gameState, size, isLoadingGame]);
@@ -193,6 +202,40 @@ function App() {
       setAllSolutions(tmpAllSolutions);
     }
   }, [grid, game.foundwords]);
+
+  // Automatically save score to Firestore when game ends and user is playing a Firestore challenge
+  useEffect(() => {
+    if (gameState === GAME_STATE.ENDED && currentChallengeId && currentUser && !scoreSaved) {
+      const score = foundSolutions.length;
+      
+      // Only save if score > 0
+      if (score > 0) {
+        saveScore(
+          currentUser.uid,
+          currentChallengeId,
+          score,
+          {
+            displayName: currentUser.displayName,
+            email: currentUser.email,
+            photoURL: currentUser.photoURL
+          }
+        ).then((result) => {
+          if (result.updated) {
+            console.log('Score automatically saved to Firestore:', score);
+            setScoreSaved(true);
+          } else {
+            console.log('Score not saved (not higher than existing):', result.reason);
+            setScoreSaved(true); // Mark as saved so we don't try again
+          }
+        }).catch((error) => {
+          console.error('Error saving score to Firestore:', error);
+          // Don't set scoreSaved to true so we can retry
+        });
+      } else {
+        setScoreSaved(true); // Mark as saved even if score is 0
+      }
+    }
+  }, [gameState, currentChallengeId, currentUser, foundSolutions.length, scoreSaved]);
 
   function correctAnswerFound(answer) {
     console.log("New correct answer:" + answer);
@@ -310,6 +353,10 @@ function App() {
         });
         setSize(challengeData.size);
         setTotalTime(0);
+        // Use the same format as populateChallenges script for consistency
+        const challengeDocId = challengeData.id || challengeData.name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        setCurrentChallengeId(challengeDocId); // Track challenge ID
+        setScoreSaved(false); // Reset score saved flag
         
         // Set game state to IN_PROGRESS to show the board
         setGameState(GAME_STATE.IN_PROGRESS);
@@ -362,6 +409,8 @@ function App() {
           setGame(data);
           setSize(data.size);
           setTotalTime(0);
+          setCurrentChallengeId(null); // Not a Firestore challenge
+          setScoreSaved(false); // Reset score saved flag
           
           // Set game state to IN_PROGRESS to show the board
           // This will trigger useEffect, but isLoadingGame flag prevents creating new game
@@ -394,7 +443,10 @@ function App() {
   return (
     <div className="App">
       <div className="header">
-        <h1>🎲 Bison Boggle 🎲</h1>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+          <h1 style={{ margin: 0 }}>🎲 Bison Boggle 🎲</h1>
+          <GoogleSignIn />
+        </div>
         <div className="game-stats">
           <div className="stat-item">
             <span className="stat-label">Total Games:</span>
@@ -499,6 +551,35 @@ function App() {
         <div className="game-content">
           <Board board={grid} hidden={false} />
           <SummaryResults words={foundSolutions} totalTime={totalTime} />
+          {currentChallengeId && (
+            <Leaderboard 
+              challengeId={currentChallengeId} 
+              challengeName={game.name || 'Challenge'}
+            />
+          )}
+          {currentUser && currentChallengeId && scoreSaved && (
+            <div style={{ 
+              padding: '10px', 
+              background: '#d4edda', 
+              color: '#155724', 
+              borderRadius: '5px',
+              marginTop: '10px'
+            }}>
+              ✓ Score saved to leaderboard!
+            </div>
+          )}
+          {currentUser && !currentChallengeId && (
+            <div style={{ 
+              padding: '10px', 
+              background: '#fff3cd', 
+              color: '#856404', 
+              borderRadius: '5px',
+              marginTop: '10px',
+              fontSize: '0.9em'
+            }}>
+              💡 Sign in and play a Fixed Challenge to see your score on the leaderboard!
+            </div>
+          )}
           <FoundSolutions 
             headerText="Missed Words [wordsize > 3]: " 
             words={allSolutions.filter(word => {
