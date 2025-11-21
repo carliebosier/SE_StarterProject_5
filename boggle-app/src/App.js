@@ -10,9 +10,11 @@ import GoogleSignIn from './components/GoogleSignIn';
 import Leaderboard from './components/Leaderboard';
 import { useAuth } from './contexts/AuthContext';
 import { db } from './firebase/config';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { convertFirestoreChallengeToApp } from './utils/firestoreHelpers';
 import { saveScore } from './utils/scoreService';
+import { createGame, saveGame, getGame, getSavedGames } from './utils/gameService';
+import dictionaryData from './full-wordlist.json';
 import './App.css';
 import {GAME_STATE} from './GameState.js';
 
@@ -37,9 +39,12 @@ function App() {
   const [scoreSaved, setScoreSaved] = useState(false); // Flag to track if score has been saved
 
   const { currentUser } = useAuth();
-  const apiBaseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
 
+  // Helper function to convert string to array (for legacy Django format compatibility)
   const Convert = (s) => {  // convert a string into an array of tokens that are strings
+    if (!s) return [];
+    if (Array.isArray(s)) return s; // Already an array
+    
     s = s.replace(/'/g, '');
     s = s.replace('[', '');
     s = s.replace(']', '');
@@ -49,78 +54,31 @@ function App() {
     return tokens;
   }
 
-  // Helper function to parse grid string - handles both JSON and Python str() formats
-  const parseGridString = (gridStr) => {
-    if (!gridStr || typeof gridStr !== 'string') {
-      throw new Error("Grid string is invalid");
-    }
-    
-    // Try multiple parsing strategies
-    // Strategy 1: Direct JSON parse (if already in JSON format with double quotes)
-    try {
-      const parsed = JSON.parse(gridStr);
-      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
-        return parsed;
-      }
-    } catch (e) {
-      // Not valid JSON, continue to next strategy
-    }
-    
-    // Strategy 2: Replace single quotes with double quotes and parse as JSON
-    // This handles Python str() format: [['A', 'B'], ['C', 'D']]
-    try {
-      // Replace single quotes with double quotes
-      // Use a regex that's more careful about quote boundaries
-      let jsonStr = gridStr.replace(/'/g, '"');
-      const parsed = JSON.parse(jsonStr);
-      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
-        return parsed;
-      }
-    } catch (e) {
-      console.warn("JSON parsing with quote replacement failed:", e);
-    }
-    
-    // Strategy 3: Use eval as last resort (safe here since we control the data source)
-    // This is a fallback for edge cases where JSON parsing fails
-    try {
-      // Sanitize the string first - only allow alphanumeric, brackets, commas, quotes, and spaces
-      const sanitized = gridStr.replace(/[^\[\],'\"\w\s]/g, '');
-      // eslint-disable-next-line no-eval
-      const parsed = eval('(' + sanitized + ')');
-      if (Array.isArray(parsed) && parsed.length > 0 && Array.isArray(parsed[0])) {
-        console.warn("Used eval to parse grid - consider fixing the data format");
-        return parsed;
-      }
-    } catch (e) {
-      console.error("Eval parsing also failed:", e);
-    }
-    
-    throw new Error(`Failed to parse grid string. Original: ${gridStr.substring(0, 100)}...`);
-  }
-
-  // Load saved games list
+  // Load saved games from Firestore (replaces Django backend)
   useEffect(() => {
-    fetch(`${apiBaseUrl}/api/games/`)
-      .then((response) => response.json())
-      .then((data) => {
-        setSavedGames(data);
-        // Calculate statistics
-        if (data.length > 0) {
-          const totalWords = data.reduce((sum, g) => {
-            const words = Convert(g.foundwords);
-            return sum + words.length;
-          }, 0);
-          setGameStats({
-            totalGames: data.length,
-            totalWords: totalWords,
-            avgWords: Math.round(totalWords / data.length)
-          });
-        }
-      })
-      .catch((err) => {
-        console.log("Error loading games:", err.message);
-      });
-  }, []);
+    if (currentUser) {
+      getSavedGames(currentUser.uid)
+        .then((games) => {
+          setSavedGames(games);
+          // Calculate statistics
+          if (games.length > 0) {
+            const totalWords = games.reduce((sum, g) => sum + (g.solutions?.length || 0), 0);
+            setGameStats({
+              totalGames: games.length,
+              totalWords: totalWords,
+              avgWords: Math.round(totalWords / games.length)
+            });
+          }
+        })
+        .catch((err) => {
+          console.error('Error loading saved games:', err);
+        });
+    } else {
+      // Clear saved games if user signs out
+      setSavedGames([]);
+      setGameStats({ totalGames: 0, totalWords: 0, avgWords: 0 });
+    }
+  }, [currentUser]);
 
   // Load challenges from Firestore
   useEffect(() => {
@@ -167,19 +125,22 @@ function App() {
     if (gameState === GAME_STATE.IN_PROGRESS && !isLoadingGame) {
       // Only create a new game if grid is empty (not when loading a saved game)
       if (grid.length === 0) {
-        const url = `${apiBaseUrl}/api/game/create/${size}/`;
-        console.log("Creating new game:", url);
-        fetch(url)
-          .then((response) => response.json())
-          .then((data) => {
-            console.log("New game data:", data);
-            setGame(data);
-            const s = data.grid.replace(/'/g, '"'); // replace single quotes with double quotes
-            setGrid(JSON.parse(s)); // parse JSON string to a 2D array
+        console.log("Creating new game client-side, size:", size);
+        createGame(size, dictionaryData.words || dictionaryData)
+          .then((gameData) => {
+            console.log("New game created:", gameData);
+            setGame({
+              name: gameData.name,
+              size: gameData.size,
+              foundwords: JSON.stringify(gameData.solutions).replace(/"/g, "'")
+            });
+            setGrid(gameData.grid); // Already a 2D array
+            setAllSolutions(gameData.solutions);
             setFoundSolutions([]);
           })
           .catch((err) => {
-            console.log("Fetch error:", err.message);
+            console.error("Error creating game:", err);
+            alert('Failed to create game: ' + err.message);
           });
       }
     } else if (gameState === GAME_STATE.BEFORE) {
@@ -196,10 +157,17 @@ function App() {
 
   // useEffect will trigger when the array items in the second argument are
   // updated so whenever grid is updated, we will recompute the solutions
+  // Note: For Firestore games, solutions are already set when loading
   useEffect(() => {
-    if (typeof game.foundwords !== "undefined") {
-      let tmpAllSolutions = Convert(game.foundwords);
-      setAllSolutions(tmpAllSolutions);
+    if (typeof game.foundwords !== "undefined" && game.foundwords) {
+      // Try to parse foundwords if it's a string (legacy Django format)
+      try {
+        let tmpAllSolutions = Convert(game.foundwords);
+        setAllSolutions(tmpAllSolutions);
+      } catch (e) {
+        // If parsing fails, solutions might already be set correctly
+        console.log("Note: foundwords parsing skipped (solutions may already be set)");
+      }
     }
   }, [grid, game.foundwords]);
 
@@ -255,58 +223,52 @@ function App() {
       return;
     }
 
-    // Serialize grid and foundwords to match backend format
-    // Backend stores grid as string representation of 2D array
-    // foundwords should contain ALL possible solutions (allSolutions) for validation
-    const gridStr = JSON.stringify(grid).replace(/"/g, "'");
-    // Save allSolutions (all possible words) in foundwords field
-    const allWordsStr = allSolutions.length > 0 
-      ? JSON.stringify(allSolutions).replace(/"/g, "'")
-      : JSON.stringify(foundSolutions).replace(/"/g, "'");
-    
-    // Calculate score: number of words the user found
-    const userScore = foundSolutions.length;
-    
-    const gameData = {
+    if (!currentUser) {
+      setSaveMessage('Please sign in to save games');
+      setTimeout(() => setSaveMessage(''), 3000);
+      return;
+    }
+
+    // Prepare game data for Firestore
+    const gameDataToSave = {
       name: gameName.trim(),
       size: size,
-      grid: gridStr,
-      foundwords: allWordsStr,
-      score: userScore
+      grid: grid, // 2D array
+      solutions: allSolutions, // All valid words
+      score: foundSolutions.length // User's score (words found)
     };
 
-    fetch(`${apiBaseUrl}/api/game/save/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(gameData)
-    })
-      .then((response) => response.json())
-      .then((data) => {
+    // Save to Firestore
+    saveGame(
+      gameDataToSave,
+      currentUser.uid,
+      {
+        displayName: currentUser.displayName,
+        email: currentUser.email,
+        photoURL: currentUser.photoURL
+      }
+    )
+      .then((gameId) => {
         setSaveMessage('Game saved successfully!');
         setGameName('');
         // Refresh saved games list
-        return fetch(`${apiBaseUrl}/api/games/`);
+        return getSavedGames(currentUser.uid);
       })
-      .then((response) => response.json())
-      .then((data) => {
-        setSavedGames(data);
-        if (data.length > 0) {
-          const totalWords = data.reduce((sum, g) => {
-            const words = Convert(g.foundwords);
-            return sum + words.length;
-          }, 0);
+      .then((games) => {
+        setSavedGames(games);
+        // Calculate statistics
+        if (games.length > 0) {
+          const totalWords = games.reduce((sum, g) => sum + (g.solutions?.length || 0), 0);
           setGameStats({
-            totalGames: data.length,
+            totalGames: games.length,
             totalWords: totalWords,
-            avgWords: Math.round(totalWords / data.length)
+            avgWords: Math.round(totalWords / games.length)
           });
         }
       })
       .catch((err) => {
-        console.log("Error saving game:", err.message);
-        setSaveMessage('Error saving game');
+        console.error('Error saving game:', err);
+        setSaveMessage('Error saving game: ' + (err.message || 'Unknown error'));
       });
     
     setTimeout(() => setSaveMessage(''), 3000);
@@ -371,59 +333,39 @@ function App() {
       return;
     }
 
-    // Otherwise, load from Django backend (existing functionality)
-    fetch(`${apiBaseUrl}/api/game/${gameId}/`)
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Loaded game data:", data);
-        console.log("Grid string:", data.grid);
+    // Otherwise, load from Firestore saved games (replaces Django backend)
+    getGame(gameId)
+      .then((gameData) => {
+        console.log("Loaded game data from Firestore:", gameData);
         
-        try {
-          // Parse the grid using the helper function that handles multiple formats
-          const parsedGrid = parseGridString(data.grid);
-          console.log("Parsed grid:", parsedGrid);
-          
-          // Validate that we got a valid 2D array
-          if (!Array.isArray(parsedGrid) || parsedGrid.length === 0) {
-            throw new Error("Invalid grid format: not an array");
-          }
-          
-          // Validate all rows are arrays
-          if (!parsedGrid.every(row => Array.isArray(row))) {
-            throw new Error("Invalid grid format: not all rows are arrays");
-          }
-          
-          // Parse foundwords (which contains all possible solutions)
-          const allWords = Convert(data.foundwords);
-          console.log("Parsed words count:", allWords.length);
-          
-          // Set all state at once to avoid race conditions
-          setGrid(parsedGrid);
-          setAllSolutions(allWords);
-          setFoundSolutions([]); // Reset found solutions (user starts fresh when loading)
-          setGame(data);
-          setSize(data.size);
-          setTotalTime(0);
-          setCurrentChallengeId(null); // Not a Firestore challenge
-          setScoreSaved(false); // Reset score saved flag
-          
-          // Set game state to IN_PROGRESS to show the board
-          // This will trigger useEffect, but isLoadingGame flag prevents creating new game
-          setGameState(GAME_STATE.IN_PROGRESS);
-          
-          // Clear loading flag after a short delay to ensure state is set
-          setTimeout(() => setIsLoadingGame(false), 100);
-        } catch (parseError) {
-          console.error("Error parsing game data:", parseError);
-          console.error("Grid string that failed:", data.grid);
-          setIsLoadingGame(false);
-          alert(`Error parsing game data: ${parseError.message}. Please check the console for details.`);
+        // Game data already has 2D grid and solutions
+        // Validate grid
+        if (!Array.isArray(gameData.grid) || gameData.grid.length === 0) {
+          throw new Error("Invalid grid format: not an array");
         }
+        
+        if (!gameData.grid.every(row => Array.isArray(row))) {
+          throw new Error("Invalid grid format: not all rows are arrays");
+        }
+        
+        // Set all state at once to avoid race conditions
+        setGrid(gameData.grid); // Already 2D array
+        setAllSolutions(gameData.solutions || []);
+        setFoundSolutions([]); // Reset found solutions (user starts fresh when loading)
+        setGame({
+          ...gameData,
+          foundwords: JSON.stringify(gameData.solutions || []).replace(/"/g, "'") // Legacy format for compatibility
+        });
+        setSize(gameData.size);
+        setTotalTime(0);
+        setCurrentChallengeId(null); // Not a Firestore challenge
+        setScoreSaved(false); // Reset score saved flag
+        
+        // Set game state to IN_PROGRESS to show the board
+        setGameState(GAME_STATE.IN_PROGRESS);
+        
+        // Clear loading flag after a short delay to ensure state is set
+        setTimeout(() => setIsLoadingGame(false), 100);
       })
       .catch((err) => {
         console.error("Error loading game:", err);
@@ -527,10 +469,15 @@ function App() {
             <button 
               className="load-button"
               onClick={handleShowChallengeList}
-              disabled={firestoreChallenges.length === 0 && savedGames.length === 0}
+              disabled={firestoreChallenges.length === 0 && (!currentUser || savedGames.length === 0)}
             >
               🎮 Load Challenge
             </button>
+            {!currentUser && firestoreChallenges.length > 0 && (
+              <span style={{ fontSize: '0.85em', color: '#666', marginLeft: '10px' }}>
+                Sign in to save and load your games
+              </span>
+            )}
           </div>
         </div>
       </div>

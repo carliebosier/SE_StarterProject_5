@@ -26,6 +26,16 @@ service cloud.firestore {
                      request.auth.uid == resource.data.userId;  // Users can only update their own scores
       allow delete: if false;  // Prevent deletion
     }
+    
+    // Saved Games - users can read all, write/delete only their own
+    match /savedGames/{gameId} {
+      allow read: if true;  // Anyone can read (or restrict: request.auth != null)
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && 
+                     request.auth.uid == resource.data.userId;
+      allow delete: if request.auth != null && 
+                     request.auth.uid == resource.data.userId;
+    }
   }
 }
 ```
